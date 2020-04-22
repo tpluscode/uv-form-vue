@@ -14,6 +14,19 @@
                 "label": "1.1 Reference code"
             },
             {
+                "id": "1.1-sep",
+                "type": "select",
+                "choices": [
+                    {"label": ".", "value": "."}
+                ],
+                "label": ""
+            },
+            {
+                "id": "1.1-show",
+                "type": "checkbox",
+                "label": "show"
+            },
+            {
                 "id": "1.1-ref-alt",
                 "type": "string",
                 "label": "Alt"
@@ -37,6 +50,29 @@
                 "id": "1.3-date-to",
                 "type": "date",
                 "label": "to"
+            },
+            {
+                "id": "1.4-level",
+                "type": "select",
+                "choices": [
+                    {"label": "Notice", "value": "notice"},
+                    {"label": "File", "value": "file"}
+                ],
+                "label": "1.4 Level of description"
+            },
+            {
+                "id": "1.5-extent",
+                "type": "string",
+                "label": "1.5 Extent and medium"
+            },
+            {
+                "id": "1.5-unit",
+                "type": "select",
+                "choices": [
+                    {"label": "cm", "value": "cm"},
+                    {"label": "boxes", "value": "boxes"}
+                ],
+                "label": ""
             }
         ]
     },
@@ -45,14 +81,24 @@
         "name": "2. Context",
         "fields": [
             {
-              "id": "fonds",
-              "type": "string",
-              "label": "Fonds"
+              "id": "2.1-creator",
+              "type": "text",
+              "label": "Creator"
             },
             {
-              "id": "author",
-              "type": "checkbox",
-              "label": "Author"
+              "id": "2.2-admin-history",
+              "type": "text",
+              "label": "Administrative/biographical history"
+            },
+            {
+              "id": "2.3-archival-history",
+              "type": "text",
+              "label": "Archival history"
+            },
+            {
+              "id": "2.4-source",
+              "type": "text",
+              "label": "Immediate source of acquisition or transfer"
             }
         ]
     }
