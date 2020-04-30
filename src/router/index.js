@@ -1,13 +1,19 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Home from '../views/Home.vue'
+import ShapeForm from '../views/ShapeForm.vue'
 
 Vue.use(VueRouter)
 
 const routes = [
   {
     path: '/',
-    name: 'Home',
+    name: 'shape-form',
+    component: ShapeForm
+  },
+  {
+    path: '/json-form',
+    name: 'json-form',
     component: Home
   }
 ]
