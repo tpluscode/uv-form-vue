@@ -2,8 +2,7 @@
   <div class="columns">
     <div class="column">
       <h2 class="title is-size-4">Form</h2>
-      <UVForm v-if="shape" :shape="shape" :data="data" @submit="onSubmit" />
-      <p v-else>Not loaded</p>
+      <div ref="form"></div>
     </div>
     <div class="column is-size-7">
       <h2 class="title is-size-4">Data</h2>
@@ -16,7 +15,7 @@
             <th>object</th>
           </thead>
           <tbody>
-            <tr v-for="({subject, predicate, object}, index) in data.dataset.quads" :key="index">
+            <tr v-for="({subject, predicate, object}, index) in storedQuads" :key="index">
               <td>{{ subject.value }}</td>
               <td>{{ predicate.value }}</td>
               <td>{{ object.value }}</td>
@@ -33,17 +32,40 @@
 import fetch from '@rdfjs/fetch'
 import clownface from 'clownface'
 import { rdf, sh } from '@tpluscode/rdf-ns-builders'
+import { uvForm } from '@tpluscode/uv-form/src/uvForm'
+import { Matcher } from '@tpluscode/uv-form/example/matcher'
+import Validator from 'rdf-validate-shacl'
 import RDF from '@rdfjs/dataset'
 import UVForm from '@/components/UVForm.vue'
+import Vue from 'vue'
+
+var FormClass = Vue.extend(UVForm)
+
+class VueRenderer {
+  constructor () {
+    this.form = new FormClass()
+  }
+
+  append (params) {
+    this.form.addField(params)
+  }
+
+  getResult () {
+    return this.form
+  }
+}
 
 export default {
   name: 'ShapeForm',
-  components: { UVForm },
 
   data () {
     return {
       shape: null,
-      data: null
+      data: null,
+      storedQuads: null,
+      changeListener: null,
+      validator: null,
+      renderer: new VueRenderer()
     }
   },
 
@@ -54,27 +76,36 @@ export default {
       .node(sh.NodeShape)
       .in(rdf.type)
 
-    this.data = clownface({ dataset: RDF.dataset() })
+    this.data = clownface({ dataset: RDF.dataset(), term: RDF.namedNode('http://example.com/') })
 
-    // const resource = RDF.blankNode()
-    // const data = clownface({ dataset: RDF.dataset(), term: resource })
-    // this.data = data.node(resource)
-    //   .addOut(rdf.type, this.shape.out(sh.targetClass).term)
-    //   .addOut(RDF.namedNode('http://purl.org/dc/elements/1.1/identifier'), RDF.literal('Hoy'))
-  },
+    this.validator = new Validator(shapes)
 
-  computed: {
-    dataDisplay () {
-      if (!this.data) return 'No data'
+    const { result, changeListener } = this.runForm()
+    this.changeListener = changeListener
 
-      return [...this.data.dataset.quads]
-        .map(({ subject, predicate, object }) => `${subject.value} ${predicate.value} ${object.value}`)
-    }
+    this.changeListener.onChange(() => {
+      this.runForm()
+    })
+
+    const form = result
+    form.$mount()
+    form.$on('submit', () => {
+      this.storedQuads = [...this.data.dataset]
+      this.runForm({ validationReport: this.validator.validate(this.data.dataset) })
+    })
+    this.$refs.form.appendChild(form.$el)
   },
 
   methods: {
-    onSubmit (newData) {
-      this.data = newData
+    runForm ({ validationReport } = {}) {
+      return uvForm({
+        shapePointer: this.shape,
+        resource: this.data,
+        renderer: this.renderer,
+        matcher: new Matcher(),
+        changeListener: this.changeListener,
+        validationReport
+      })
     }
   }
 }

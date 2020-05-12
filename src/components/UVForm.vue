@@ -4,11 +4,11 @@
       <form class="form" @submit.prevent="onSubmit">
         <UVFormField
           v-for="field in section.fields"
-          :key="field.term.value"
-          :shape="field"
-          :data="formData"
-          :validationReport="validationReport"
-          @change="onChange"
+          :key="field.shape.term.value"
+          :shape="field.shape"
+          :data="field.values"
+          :change-callback="field.changeCallback"
+          :validationResults="field.validationResults"
         />
         <button type="submit" class="button is-primary">Submit</button>
       </form>
@@ -18,10 +18,7 @@
 </template>
 
 <script>
-import clownface, { Clownface } from 'clownface'
-import { rdf, rdfs, sh } from '@tpluscode/rdf-ns-builders'
-import RDF from '@rdfjs/dataset'
-import Validator from 'rdf-validate-shacl'
+import { Clownface } from 'clownface'
 import UVFormField from './UVFormField.vue'
 
 export default {
@@ -29,57 +26,46 @@ export default {
   components: { UVFormField },
 
   props: {
-    shape: Clownface,
     data: Clownface
   },
 
   data () {
-    const getOrder = (term) => term.out(sh.order).value || Infinity
-
-    const sections = this.shape.node(sh.PropertyGroup).in(rdf.type)
-      .toArray()
-      .sort((group1, group2) => getOrder(group1) - getOrder(group2))
-      .map((section) => ({
-        id: section.term.value,
-        label: section.out(rdfs.label).value,
-        fields: section.in(sh.group)
-          .toArray()
-          .sort((field1, field2) => getOrder(field1) - getOrder(field2))
-      }))
-
-    // Clone input data
-    // TODO: When data changes, formData should be updated
-    let formData = clownface({ dataset: RDF.dataset([...this.data.dataset]), term: this.data.term })
-
-    // Create
-    if (!this.data.term) {
-      const resource = RDF.blankNode()
-      formData = formData.node(resource)
-
-      const resourceType = this.shape.out(sh.targetClass).term
-      formData.addOut(rdf.type, resourceType)
-    }
-
     return {
       activeTab: 0,
-      sections,
-      formData,
-      validator: new Validator(this.shape.dataset),
-      validationReport: null
+      sections: []
     }
   },
 
   methods: {
     onSubmit () {
-      this.$emit('submit', this.formData)
+      this.$emit('submit')
     },
 
-    onChange (fieldShape, newValue) {
-      // TODO: Handle other types of path
-      const path = fieldShape.out(sh.path).term
-      this.formData.deleteOut(path).addOut(path, RDF.literal(newValue))
+    addField ({ shape, changeCallback, values, validationResults }) {
+      const sectionKey = shape.group ? shape.group.id.value : ''
 
-      this.validationReport = this.validator.validate(this.formData.dataset)
+      let section = this.sections.find(s => s.id === sectionKey)
+      if (!section) {
+        section = {
+          id: sectionKey,
+          label: shape.group ? shape.group.label : 'default',
+          fields: []
+        }
+        this.sections.push(section)
+      }
+
+      const index = section.fields.findIndex(field => field.shape.term.equals(shape.id))
+      const field = {
+        shape: shape._selfGraph,
+        changeCallback,
+        values,
+        validationResults
+      }
+      if (index >= 0) {
+        section.fields.splice(index, 1, field)
+      } else {
+        section.fields.push(field)
+      }
     }
   }
 }

@@ -28,8 +28,8 @@
 
 <script>
 import { Clownface } from 'clownface'
-import { ValidationReport } from 'rdf-validate-shacl/src/validation-report'
-import { rdfs, sh } from '@tpluscode/rdf-ns-builders'
+import RDF from '@rdfjs/data-model'
+import { rdfs } from '@tpluscode/rdf-ns-builders'
 
 export default {
   name: 'UVFormField',
@@ -37,7 +37,8 @@ export default {
   props: {
     shape: { type: Clownface, required: true },
     data: { type: Clownface, required: true },
-    validationReport: { type: ValidationReport, required: true }
+    validationResults: { required: true },
+    changeCallback: { required: true }
   },
 
   data () {
@@ -46,18 +47,13 @@ export default {
     // const minCount = this.shape.out(sh.minCount).value || 0
     // const maxCount = this.shape.out(sh.maxCount).value || Infinity
 
-    const valuePath = this.shape.out(sh.path).term
-    const value = valuePath ? this.data.out(valuePath).value : ''
-
-    const validationResult = this.validationReport && this.validationReport.results
-      .find((result) => result.path === valuePath.value)
-    const validationMessage = validationResult ? validationResult.message : ''
+    const validationMessage = this.validationResults && this.validationResults.map(vr => vr.message).join(', ')
 
     return {
       fieldType: 'string',
       fieldId: '',
       fieldLabel: label || description || '',
-      fieldValue: value,
+      fieldValue: this.data.value || '',
       // isRequired: minCount > 0,
       isRequired: false,
       choices: [],
@@ -67,8 +63,11 @@ export default {
 
   methods: {
     onChange (e) {
-      const newValue = e.target.value
-      this.$emit('change', this.shape, newValue)
+      if (e.target.value) {
+        this.changeCallback(RDF.literal(e.target.value))
+      } else {
+        this.changeCallback(null)
+      }
     }
   }
 }
